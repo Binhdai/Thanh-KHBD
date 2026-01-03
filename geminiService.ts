@@ -4,7 +4,7 @@ import { LessonPlan, AIResponse } from "./types";
 import { DIGITAL_COMPETENCY_FRAMEWORK } from "./constants";
 
 export const analyzeLessonPlan = async (plan: LessonPlan): Promise<AIResponse> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
   
   const frameworkContext = JSON.stringify(DIGITAL_COMPETENCY_FRAMEWORK);
   const prompt = `
