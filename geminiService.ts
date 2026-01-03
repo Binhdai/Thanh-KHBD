@@ -1,10 +1,10 @@
 
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenAI } from "@google/genai";
 import { LessonPlan, AIResponse } from "./types";
 import { DIGITAL_COMPETENCY_FRAMEWORK } from "./constants";
 
 export const analyzeLessonPlan = async (plan: LessonPlan): Promise<AIResponse> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   
   const frameworkContext = JSON.stringify(DIGITAL_COMPETENCY_FRAMEWORK);
   const prompt = `
@@ -22,12 +22,37 @@ export const analyzeLessonPlan = async (plan: LessonPlan): Promise<AIResponse> =
     YÊU CẦU CHI TIẾT VỀ CẤU TRÚC KHBD (modifiedPlan):
     Phải trình bày bằng Markdown theo đúng định dạng mẫu của Bộ Giáo dục:
 
-    I. MỤC TIÊU (Kiến thức, Năng lực tin học, Năng lực chung, Năng lực số - ghi rõ mã, Phẩm chất)
-    II. THIẾT BỊ DẠY HỌC VÀ HỌC LIỆU
-    III. TIẾN TRÌNH DẠY HỌC (Phân chia theo tiết học: --- TIẾT 1 ---, --- TIẾT 2 ---...)
-    Mỗi hoạt động phải gồm 4 mục chuẩn: a) Mục tiêu (có mã NLS), b) Nội dung, c) Sản phẩm, d) Tổ chức thực hiện (4 bước).
+    I. MỤC TIÊU
+    1. Kiến thức: Liệt kê các kiến thức cốt lõi.
+    2. Năng lực:
+       - Năng lực tin học: (NLa, NLb, NLc, NLd, NLe).
+       - Năng lực chung: (Tự chủ, Giao tiếp, Giải quyết vấn đề).
+       - Năng lực số (NLS): Liệt kê CHÍNH XÁC mã chỉ báo (ví dụ: 1.3.NC1.a) và mô tả biểu hiện cụ thể trong bài.
+    3. Phẩm chất: (Yêu nước, Nhân ái, Chăm chỉ, Trung thực, Trách nhiệm).
 
-    Hãy sử dụng kiến thức từ SGK (SQL cho lớp 11, GIMP cho lớp 10/11, AI cho lớp 12) để làm ví dụ minh họa.
+    II. THIẾT BỊ DẠY HỌC VÀ HỌC LIỆU
+    (Các thiết bị số, phần mềm thực hành, link học liệu số...).
+
+    III. TIẾN TRÌNH DẠY HỌC (Phân chia theo tiết học)
+    --- TIẾT 1 ---
+    [Liệt kê các hoạt động 1, 2...]
+    --- TIẾT 2 ---
+    [Liệt kê các hoạt động 3, 4...]
+
+    Mỗi hoạt động phải gồm 4 mục chuẩn:
+    a) Mục tiêu: (Nêu mục tiêu kiến thức/kỹ năng và mã NLS tích hợp).
+    b) Nội dung: (Nhiệm vụ cụ thể của HS).
+    c) Sản phẩm: (Kết quả học tập cụ thể).
+    d) Tổ chức thực hiện: (Gồm 4 bước: Chuyển giao nhiệm vụ -> Thực hiện nhiệm vụ -> Báo cáo, thảo luận -> Kết luận, nhận định).
+
+    KẾT QUẢ TRẢ VỀ (JSON):
+    {
+      "analysis": "Nhận xét về tính logic và sự phù hợp của việc phân bổ thời lượng và mã NLS.",
+      "suggestions": [{"activityId": "...", "competencyCode": "...", "suggestedMethod": "Gợi ý cách dạy cụ thể để đạt mã NLS này", "rationale": "Lý do chọn mã này"}],
+      "modifiedPlan": "Toàn bộ nội dung Markdown chuẩn Phụ lục 1 & 3, có tách tiết."
+    }
+
+    Lưu ý: Hãy sử dụng kiến thức từ SGK (như SQL cho lớp 11, GIMP cho lớp 10/11, AI cho lớp 12) để làm ví dụ minh họa sống động. Trả về JSON thuần.
   `;
 
   try {
@@ -36,34 +61,7 @@ export const analyzeLessonPlan = async (plan: LessonPlan): Promise<AIResponse> =
       contents: [{ parts: [{ text: prompt }] }],
       config: {
         maxOutputTokens: 66536,
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            analysis: {
-              type: Type.STRING,
-              description: "Nhận xét tổng quan về việc tích hợp NLS và phân bổ thời lượng."
-            },
-            suggestions: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  activityId: { type: Type.STRING },
-                  competencyCode: { type: Type.STRING },
-                  suggestedMethod: { type: Type.STRING },
-                  rationale: { type: Type.STRING }
-                },
-                required: ["activityId", "competencyCode", "suggestedMethod", "rationale"]
-              }
-            },
-            modifiedPlan: {
-              type: Type.STRING,
-              description: "Toàn bộ nội dung giáo án Markdown chuẩn Phụ lục 1 & 3, có tách tiết rõ ràng."
-            }
-          },
-          required: ["analysis", "suggestions", "modifiedPlan"]
-        }
+        responseMimeType: "application/json"
       },
     });
 
@@ -72,6 +70,6 @@ export const analyzeLessonPlan = async (plan: LessonPlan): Promise<AIResponse> =
     return JSON.parse(text) as AIResponse;
   } catch (error) {
     console.error("Gemini API Error:", error);
-    throw new Error("Lỗi hệ thống AI khi xử lý dữ liệu. Vui lòng thử lại với nội dung ngắn gọn hơn hoặc kiểm tra kết nối.");
+    throw new Error("Lỗi hệ thống AI. Vui lòng kiểm tra lại nội dung bài học.");
   }
 };
